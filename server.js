@@ -8,8 +8,19 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const BASE = 'https://www.phantommail.shop/public/';
 
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true }));
+// Custom JSON parser that doesn't throw HTML errors
+app.use((req, res, next) => {
+  let body = '';
+  req.on('data', chunk => { body += chunk.toString(); });
+  req.on('end', () => {
+    try {
+      req.body = body ? JSON.parse(body) : {};
+    } catch (e) {
+      req.body = {};
+    }
+    next();
+  });
+});
 
 const sessions = {};
 const CRED_EMAIL = 'testuser_scrape2026@proton.me';
