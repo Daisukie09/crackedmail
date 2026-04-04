@@ -8,8 +8,16 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const BASE = 'https://www.phantommail.shop/public/';
 
-app.use(express.json());
+app.use(express.json({ limit: '1mb', strict: false }));
 app.use(express.urlencoded({ extended: true }));
+
+// Handle JSON parse errors
+app.use((err, req, res, next) => {
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'Invalid JSON' });
+  }
+  next(err);
+});
 
 const sessions = {};
 const CRED_EMAIL = 'testuser_scrape2026@proton.me';
