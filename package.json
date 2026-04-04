@@ -1,0 +1,18 @@
+{
+  "name": "vincentmail",
+  "version": "1.0.0",
+  "description": "Temporary email generator powered by phantommail.shop",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cheerio": "^1.0.0",
+    "node-fetch": "^2.7.0",
+    "tough-cookie": "^4.1.3"
+  }
+}

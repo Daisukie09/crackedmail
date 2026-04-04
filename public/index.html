@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VincentMail - Temporary Email</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a2e;
+      --border: #2a2a3e;
+      --accent: #6c63ff;
+      --accent2: #ff6584;
+      --text: #e8e8f0;
+      --text-dim: #8888a0;
+      --green: #22c55e;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .bg-effects {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+    }
+    .bg-effects .orb {
+      position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.15;
+      animation: float 8s ease-in-out infinite;
+    }
+    .bg-effects .orb:nth-child(1) { width: 400px; height: 400px; background: var(--accent); top: -100px; left: -100px; }
+    .bg-effects .orb:nth-child(2) { width: 300px; height: 300px; background: var(--accent2); bottom: -50px; right: -50px; animation-delay: 3s; }
+    .bg-effects .orb:nth-child(3) { width: 250px; height: 250px; background: #22c55e; top: 50%; left: 50%; animation-delay: 5s; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-30px) scale(1.05); }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(108, 99, 255, 0.4); }
+      50% { box-shadow: 0 0 0 12px rgba(108, 99, 255, 0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .container {
+      position: relative; z-index: 1;
+      max-width: 700px; margin: 0 auto; padding: 2rem 1.5rem;
+    }
+
+    /* Header */
+    .header {
+      text-align: center; margin-bottom: 2.5rem;
+      animation: slideUp 0.5s ease;
+    }
+    .logo {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 64px; height: 64px; border-radius: 16px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      font-size: 28px; margin-bottom: 1rem;
+      box-shadow: 0 8px 32px rgba(108, 99, 255, 0.3);
+    }
+    .header h1 {
+      font-size: 2rem; font-weight: 800;
+      background: linear-gradient(135deg, #fff, #c4b5fd);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .header p { color: var(--text-dim); margin-top: 0.3rem; }
+
+    /* Card */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem;
+      animation: slideUp 0.5s ease; animation-fill-mode: both;
+    }
+    .card:nth-child(2) { animation-delay: 0.1s; }
+    .card:nth-child(3) { animation-delay: 0.2s; }
+
+    /* Email Display */
+    .email-display {
+      display: none; text-align: center; padding: 1.5rem;
+    }
+    .email-display.active { display: block; }
+
+    .email-address {
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 1.3rem; font-weight: 600; color: var(--accent);
+      background: var(--surface2); padding: 0.8rem 1.2rem;
+      border-radius: var(--radius); border: 1px solid var(--border);
+      word-break: break-all; margin: 1rem 0;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 0.7rem 1.4rem; border-radius: var(--radius);
+      font-size: 0.9rem; font-weight: 600; border: none;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn:active { transform: scale(0.96); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #5b52ee);
+      color: #fff;
+    }
+    .btn-primary:hover { box-shadow: 0 4px 20px rgba(108, 99, 255, 0.4); }
+
+    .btn-secondary {
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent); }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15); color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
+
+    .btn-success {
+      background: rgba(34, 197, 94, 0.15); color: var(--green);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .btn-success:hover { background: rgba(34, 197, 94, 0.25); }
+
+    .btn-group {
+      display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap;
+    }
+
+    /* Generate Button */
+    .generate-section { text-align: center; padding: 2rem 0; }
+    .generate-btn {
+      padding: 1rem 2.5rem; font-size: 1.1rem;
+      animation: pulse 2s infinite;
+    }
+
+    /* Inbox */
+    .inbox-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1rem;
+    }
+    .inbox-header h2 { font-size: 1.2rem; font-weight: 700; }
+
+    .email-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .email-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .email-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+    .email-card .subject { font-weight: 600; margin-bottom: 0.3rem; }
+    .email-card .meta { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.5rem; }
+    .email-card .preview {
+      font-family: 'Consolas', monospace; font-size: 0.85rem;
+      background: var(--bg); padding: 0.6rem 0.8rem; border-radius: 8px;
+      word-break: break-all; white-space: pre-wrap; max-height: 120px; overflow: auto;
+    }
+
+    .empty-state {
+      text-align: center; padding: 3rem 1rem; color: var(--text-dim);
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 0.8rem; opacity: 0.5; }
+
+    /* Toast */
+    .toast {
+      position: fixed; top: 20px; right: 20px; z-index: 999;
+      background: var(--green); color: #fff; padding: 0.8rem 1.2rem;
+      border-radius: var(--radius); font-weight: 600; font-size: 0.9rem;
+      transform: translateX(120%); transition: transform 0.3s ease;
+    }
+    .toast.show { transform: translateX(0); }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+    }
+
+    .hidden { display: none !important; }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.8rem; padding: 0.3rem 0.8rem;
+      background: rgba(34, 197, 94, 0.1); color: var(--green);
+      border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 20px;
+    }
+    .status-badge .dot {
+      width: 6px; height: 6px; background: var(--green);
+      border-radius: 50%; animation: pulse 2s infinite;
+    }
+
+    .auto-refresh {
+      font-size: 0.75rem; color: var(--text-dim);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .auto-refresh .dot {
+      width: 6px; height: 6px; background: var(--accent);
+      border-radius: 50%; animation: pulse 1.5s infinite;
+    }
+
+    footer {
+      text-align: center; padding: 2rem 0; color: var(--text-dim);
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-effects">
+    <div class="orb"></div>
+    <div class="orb"></div>
+    <div class="orb"></div>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <div class="logo">📧</div>
+      <h1>VincentMail</h1>
+      <p>Instant disposable email addresses</p>
+    </div>
+
+    <!-- Generate Section -->
+    <div class="card" id="generateCard">
+      <div class="generate-section" id="generateSection">
+        <button class="btn btn-primary generate-btn" onclick="createEmail()">
+          ⚡ Generate Email
+        </button>
+        <p style="color: var(--text-dim); margin-top: 0.8rem; font-size: 0.85rem;">
+          Free · No registration required
+        </p>
+      </div>
+
+      <div class="email-display" id="emailDisplay">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+          <span class="status-badge"><span class="dot"></span> Active</span>
+          <span class="auto-refresh"><span class="dot"></span> Auto-refresh inbox every 10s</span>
+        </div>
+        <div class="email-address" id="emailAddress"></div>
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="copyEmail()">📋 Copy</button>
+          <button class="btn btn-secondary" onclick="refreshInbox()">🔄 Refresh Inbox</button>
+          <button class="btn btn-primary" onclick="createEmail()">➕ New Email</button>
+          <button class="btn btn-danger" onclick="deleteEmail()">🗑️ Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inbox Section -->
+    <div class="card" id="inboxCard">
+      <div class="inbox-header">
+        <h2>📥 Inbox</h2>
+        <span id="inboxStatus" style="font-size:0.8rem; color:var(--text-dim);">Waiting for emails...</span>
+      </div>
+      <div id="inboxContent">
+        <div class="empty-state">
+          <div class="icon">📭</div>
+          <p>No emails yet</p>
+          <p style="font-size:0.8rem; margin-top:0.3rem;">Generate an email address and wait for incoming messages</p>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      VincentMail &middot; Powered by phantommail.shop &middot; Not affiliated
+    </footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let currentEmail = null;
+    let currentAliasId = null;
+    let refreshInterval = null;
+    let sessionCookie = localStorage.getItem('vm_session') || '';
+
+    const API_BASE = window.location.hostname === 'localhost' ? '/api' : '/vm';
+
+    async function api(endpoint, options = {}) {
+      const headers = { 'Content-Type': 'application/json', ...options.headers };
+      if (sessionCookie) {
+        headers['X-Session-Cookie'] = sessionCookie;
+      }
+      const res = await fetch(API_BASE + endpoint, {
+        method: options.method || 'GET',
+        headers: headers,
+        body: options.body ? JSON.stringify(options.body) : undefined
+      });
+
+      // Save session cookie from response header
+      const newCookie = res.headers.get('X-Session-Cookie');
+      if (newCookie) {
+        sessionCookie = newCookie;
+        localStorage.setItem('vm_session', sessionCookie);
+      }
+
+      return res.json();
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    async function createEmail() {
+      const btn = document.querySelector('.generate-btn');
+      btn.innerHTML = '<span class="spinner"></span> Creating...';
+      btn.disabled = true;
+
+      try {
+        const data = await api('/create-email', {
+          method: 'POST',
+          body: { userId: 'vincentmail-user' }
+        });
+
+        if (data.success) {
+          currentEmail = data.email;
+          currentAliasId = data.aliasId;
+          if (data.cookie) {
+            sessionCookie = data.cookie;
+            localStorage.setItem('vm_session', sessionCookie);
+          }
+
+          document.getElementById('emailAddress').textContent = data.email;
+          document.getElementById('generateSection').classList.add('hidden');
+          document.getElementById('emailDisplay').classList.add('active');
+
+          showToast('✅ Email created: ' + data.email);
+          refreshInbox();
+          startAutoRefresh();
+        } else {
+          showToast('❌ Failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (e) {
+        showToast('❌ Network error: ' + e.message);
+      }
+
+      btn.innerHTML = '⚡ Generate Email';
+      btn.disabled = false;
+    }
+
+    async function refreshInbox() {
+      if (!currentAliasId) return;
+
+      document.getElementById('inboxStatus').textContent = 'Refreshing...';
+
+      try {
+        const data = await api('/inbox?aliasId=' + currentAliasId);
+
+        if (data.emails && data.emails.length > 0) {
+          document.getElementById('inboxStatus').textContent = data.subtitle || data.emails.length + ' message(s)';
+
+          let html = '<div class="email-list">';
+          data.emails.forEach(email => {
+            html += `
+              <div class="email-card">
+                <div class="subject">${escapeHtml(email.subject)}</div>
+                <div class="meta">${escapeHtml(email.meta)}</div>
+              </div>
+            `;
+          });
+          html += '</div>';
+          document.getElementById('inboxContent').innerHTML = html;
+        } else {
+          document.getElementById('inboxStatus').textContent = '0 messages';
+          document.getElementById('inboxContent').innerHTML = `
+            <div class="empty-state">
+              <div class="icon">📭</div>
+              <p>No emails yet</p>
+              <p style="font-size:0.8rem; margin-top:0.3rem;">Waiting for incoming messages...</p>
+            </div>
+          `;
+        }
+      } catch (e) {
+        document.getElementById('inboxStatus').textContent = 'Error refreshing';
+      }
+    }
+
+    async function deleteEmail() {
+      if (!currentAliasId) return;
+
+      try {
+        await api('/delete', {
+          method: 'POST',
+          body: { userId: 'vincentmail-user', aliasId: currentAliasId }
+        });
+
+        currentEmail = null;
+        currentAliasId = null;
+        stopAutoRefresh();
+
+        document.getElementById('generateSection').classList.remove('hidden');
+        document.getElementById('emailDisplay').classList.remove('active');
+        document.getElementById('inboxContent').innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📭</div>
+            <p>No emails yet</p>
+            <p style="font-size:0.8rem; margin-top:0.3rem;">Generate an email address and wait for incoming messages</p>
+          </div>
+        `;
+        document.getElementById('inboxStatus').textContent = 'Waiting for emails...';
+
+        showToast('🗑️ Email deleted');
+      } catch (e) {
+        showToast('❌ Delete failed');
+      }
+    }
+
+    function copyEmail() {
+      if (!currentEmail) return;
+      navigator.clipboard.writeText(currentEmail).then(() => {
+        showToast('📋 Copied: ' + currentEmail);
+      });
+    }
+
+    function startAutoRefresh() {
+      stopAutoRefresh();
+      refreshInterval = setInterval(refreshInbox, 10000);
+    }
+
+    function stopAutoRefresh() {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str || '';
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
