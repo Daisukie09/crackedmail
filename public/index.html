@@ -290,7 +290,7 @@
     let refreshInterval = null;
     let sessionCookie = localStorage.getItem('vm_session') || '';
 
-    const API_BASE = window.location.hostname === 'localhost' ? '/api' : '/vm';
+    const API_BASE = '/api';
 
     async function api(endpoint, options = {}) {
       const headers = { 'Content-Type': 'application/json', ...options.headers };
