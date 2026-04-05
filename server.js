@@ -23,8 +23,8 @@ app.use((req, res, next) => {
 });
 
 const sessions = {};
-const CRED_EMAIL = 'testuser_scrape2026@proton.me';
-const CRED_PASS = 'TestPass123!';
+const CRED_EMAIL = 'vincentmail_bot@proton.me';
+const CRED_PASS = 'VincentMail2026!';
 
 function getSession(userId) {
   if (!sessions[userId]) {
