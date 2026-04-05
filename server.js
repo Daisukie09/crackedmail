@@ -4,21 +4,16 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const API = 'https://www.1secmail.com/api/v1/';
+const API = 'https://api.mail.tm';
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Custom JSON parser that doesn't throw HTML errors
 app.use((req, res, next) => {
   let body = '';
   req.on('data', chunk => { body += chunk.toString(); });
   req.on('end', () => {
-    try {
-      req.body = body ? JSON.parse(body) : {};
-    } catch (e) {
-      req.body = {};
-    }
+    try { req.body = body ? JSON.parse(body) : {}; } catch (e) { req.body = {}; }
     next();
   });
 });
@@ -27,28 +22,45 @@ const sessions = {};
 
 function getSession(userId) {
   if (!sessions[userId]) {
-    sessions[userId] = { login: null, domain: null, messages: [] };
+    sessions[userId] = { token: null, address: null, id: null };
   }
   return sessions[userId];
 }
 
-async function apiCall(action, params = {}) {
-  const res = await axios.get(API, { params: { action, ...params } });
-  return res.data;
+async function getDomains() {
+  const res = await axios.get(API + '/domains');
+  return res.data['hydra:member'][0].domain;
+}
+
+async function createAccount() {
+  const domain = await getDomains();
+  const username = Math.random().toString(36).substring(2, 10);
+  const password = Math.random().toString(36).substring(2, 14);
+  const address = username + '@' + domain;
+  
+  await axios.post(API + '/accounts', { address, password });
+  
+  const tokenRes = await axios.post(API + '/token', { address, password });
+  return { address, token: tokenRes.data.token, password };
+}
+
+async function getMessages(token) {
+  const res = await axios.get(API + '/messages', {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  return res.data['hydra:member'] || [];
 }
 
 app.post('/api/create-email', async (req, res) => {
   try {
     const session = getSession('default');
-    const result = await apiCall('genRandomMailbox', { count: 1 });
-    const email = result[0];
-    const [login, domain] = email.split('@');
+    const account = await createAccount();
     
-    session.login = login;
-    session.domain = domain;
-    session.messages = [];
+    session.token = account.token;
+    session.address = account.address;
+    session.id = account.address.split('@')[0];
     
-    res.json({ success: true, email, aliasId: login, domain });
+    res.json({ success: true, email: account.address, aliasId: session.id });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -56,27 +68,20 @@ app.post('/api/create-email', async (req, res) => {
 
 app.get('/api/inbox', async (req, res) => {
   try {
-    const { aliasId, login, domain } = req.query;
     const session = getSession('default');
+    if (!session.token) return res.status(400).json({ error: 'No active email' });
     
-    const l = login || session.login;
-    const d = domain || session.domain;
-    
-    if (!l || !d) return res.status(400).json({ error: 'No active email' });
-    
-    const messages = await apiCall('getMessages', { login: l, domain: d });
-    session.messages = messages;
-    
+    const messages = await getMessages(session.token);
     const formatted = messages.map(m => ({
-      subject: m.subject,
-      meta: `${m.from} · ${m.date}`,
-      preview: m.subject // 1secmail doesn't give preview in list, use subject
+      subject: m.subject || '(No Subject)',
+      meta: `${m.from?.name || m.from?.address || 'Unknown'} · ${m.createdAt}`,
+      preview: m.intro || m.subject || ''
     }));
     
     res.json({ 
       emails: formatted, 
       subtitle: `${messages.length} message(s)`,
-      aliasAddress: `${l}@${d}`
+      aliasAddress: session.address
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -85,15 +90,14 @@ app.get('/api/inbox', async (req, res) => {
 
 app.get('/api/message', async (req, res) => {
   try {
-    const { id, login, domain } = req.query;
+    const { id } = req.query;
     const session = getSession('default');
-    const l = login || session.login;
-    const d = domain || session.domain;
+    if (!session.token || !id) return res.status(400).json({ error: 'Missing params' });
     
-    if (!id || !l || !d) return res.status(400).json({ error: 'Missing params' });
-    
-    const msg = await apiCall('readMessage', { login: l, domain: d, id });
-    res.json(msg);
+    const res2 = await axios.get(API + '/messages/' + id, {
+      headers: { Authorization: 'Bearer ' + session.token }
+    });
+    res.json(res2.data);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -102,9 +106,9 @@ app.get('/api/message', async (req, res) => {
 app.post('/api/delete', async (req, res) => {
   try {
     const session = getSession('default');
-    session.login = null;
-    session.domain = null;
-    session.messages = [];
+    session.token = null;
+    session.address = null;
+    session.id = null;
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
