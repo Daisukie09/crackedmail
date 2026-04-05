@@ -99,9 +99,11 @@ async function ensureLoggedIn(session) {
 }
 
 function extractEmail(html) {
+  // Only accept emails from the "Email created:" success message
   const successMatch = html.match(/Email created:\s*([a-f0-9]+@phantommail\.shop)/);
-  const emailMatch = html.match(/data-email="([a-f0-9]+@phantommail\.shop)"/);
-  const email = successMatch ? successMatch[1] : (emailMatch ? emailMatch[1] : null);
+  if (!successMatch) return { email: null, aliasId: null };
+  
+  const email = successMatch[1];
   const allAliasIds = [...html.matchAll(/fetch_emails\.php\?id=(\d+)/g)];
   const aliasId = allAliasIds.length > 0 ? allAliasIds[0][1] : null;
   return { email, aliasId };
