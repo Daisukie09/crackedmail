@@ -9,15 +9,6 @@ const API = 'https://api.mail.tm';
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-app.use((req, res, next) => {
-  let body = '';
-  req.on('data', chunk => { body += chunk.toString(); });
-  req.on('end', () => {
-    try { req.body = body ? JSON.parse(body) : {}; } catch (e) { req.body = {}; }
-    next();
-  });
-});
-
 const sessions = {};
 
 function getSession(userId) {
