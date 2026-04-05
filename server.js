@@ -81,12 +81,17 @@ async function get(url, session) {
 }
 
 async function ensureLoggedIn(session) {
-  if (session.loggedIn && session.cookies.PHPSESSID) {
-    const check = await get(BASE + 'dashboard.php', session);
-    if (check.body && check.body.length > 500) return true;
-  }
+  // Always clear stale cookies and re-login
+  session.cookies = {};
+  session.loggedIn = false;
+  
   const result = await post(BASE, { action: 'login', email: CRED_EMAIL, password: CRED_PASS }, session);
   if (result.status === 200 && result.body && result.body.length > 500) {
+    session.loggedIn = true;
+    return true;
+  }
+  // Even if redirected, check if we got a valid dashboard
+  if (result.body && result.body.includes('dashboard') || result.body.includes('Balance')) {
     session.loggedIn = true;
     return true;
   }
